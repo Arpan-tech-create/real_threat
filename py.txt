@@ -1,0 +1,59 @@
+from flask import Flask, render_template, request
+@app.route('/')
+def index():
+    # Get the selected date range from query parameters
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+
+    # Filter the data based on the selected date range
+    filtered_data = vrg[(vrg['starting_time'] >= from_date) & (vrg['ending_time'] <= to_date)]
+
+    # Group by 'ip' and sum 'message_sum'
+    final = filtered_data.groupby('ip')['message_sum'].sum()
+
+    # Sort the values in descending order
+    final = final.sort_values(ascending=False)
+
+    # Render the template and pass the pie chart data and selected date range
+    return render_template('index.html', data=final, from_date=from_date, to_date=to_date)
+
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+</head>
+<body>
+    <form action="/" method="get">
+        From Date: <input type="date" name="from_date" value="{{ from_date }}"><br>
+        To Date: <input type="date" name="to_date" value="{{ to_date }}"><br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <div id="chart-container"></div>
+
+    <script type="text/javascript">
+        // Retrieve the data passed from Flask
+        var data = {{ data.to_json() }};
+
+        // Convert the data to the required format for Highcharts
+        var chartData = [];
+        for (var key in data) {
+            chartData.push({ name: key, y: data[key] });
+        }
+
+        // Create the pie chart using Highcharts
+        Highcharts.chart('chart-container', {
+            chart: {
+                type: 'pie'
+            },
+            title: {
+                text: 'Message Sum by IP'
+            },
+            series: [{
+                name: 'Message Sum',
+                data: chartData
+            }]
+        });
+    </script>
+</body>
+</html>
